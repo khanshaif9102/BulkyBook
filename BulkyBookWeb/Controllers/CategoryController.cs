@@ -1,5 +1,6 @@
-﻿using BulkyBookWeb.Data;
-using BulkyBookWeb.Models;
+﻿using BulkyBook.Buisness.Services.IServices;
+using BulkyBook.DataAccess.Data;
+using BulkyBook.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -7,15 +8,15 @@ namespace BulkyBookWeb.Controllers
 {
     public class CategoryController : Controller
     {
-        private readonly ApplicationDbContext _context;
-        public CategoryController(ApplicationDbContext dbContext)
+        private readonly ICategoryService _categoryService;
+        public CategoryController(ICategoryService categoryService)
         {
-            _context = dbContext;
+            _categoryService = categoryService;
         }
 
         public async Task<IActionResult> Index()
         {
-            var categories = await _context.Categories.ToListAsync();
+            var categories = await _categoryService.GetAllCategoriesAsync();
             return View("Index", categories);
         }
 
@@ -29,14 +30,13 @@ namespace BulkyBookWeb.Controllers
         [ActionName("Create")]
         public async Task<IActionResult> CreatePost(Category category)
         {
-            if (!string.IsNullOrEmpty(category.Name) && _context.Categories.Any(c => c.Name.Trim().ToLower() == category.Name.Trim().ToLower()))
+            if (!string.IsNullOrEmpty(category.Name) && !await _categoryService.IsCategoryNameUniqueAsync(category.Name))
             {
                 ModelState.AddModelError("", "Category name is allready exists! ");
             }
             if (ModelState.IsValid)
             {
-                await _context.Categories.AddAsync(category);
-                await _context.SaveChangesAsync();
+                await _categoryService.CreateCategory(category);
                 TempData["success"] = "Category has been created successfully";
                 return RedirectToAction("Index");
             }
@@ -50,7 +50,7 @@ namespace BulkyBookWeb.Controllers
             {
                 return NotFound();
             }
-            var category = await _context.Categories.FindAsync(id);
+            var category = await _categoryService.GetCategoryByIdAsync(id.Value);
             if (category==null)
             {
                 return NotFound();
@@ -64,14 +64,13 @@ namespace BulkyBookWeb.Controllers
         [ActionName("Update")]
         public async Task<IActionResult> UpdatePOST(Category category)
         {
-            if (!string.IsNullOrEmpty(category.Name) && await _context.Categories.AnyAsync(c => c.Name.Trim().ToLower() == category.Name.Trim().ToLower() && c.Id != category.Id))
+            if (!string.IsNullOrEmpty(category.Name) && !await _categoryService.IsCategoryNameUniqueAsync(category.Name, category.Id))
             {
                 ModelState.AddModelError("", "Category name is allready exists! ");
             }
             if(ModelState.IsValid)
             {
-                _context.Categories.Update(category);
-                await _context.SaveChangesAsync();
+                await _categoryService.UpdateCategoryAsync(category);
                 TempData["success"] = "Category has been updated successfully";
                 return RedirectToAction("Index");
             }
@@ -84,7 +83,7 @@ namespace BulkyBookWeb.Controllers
             {
                 return NotFound();
             }
-            var category = await _context.Categories.FindAsync(id);
+            var category = await _categoryService.GetCategoryByIdAsync(id.Value);
             if (category == null)
             {
                 return NotFound();
@@ -97,14 +96,7 @@ namespace BulkyBookWeb.Controllers
         [ActionName("Delete")]
         public async Task<IActionResult> DeletePOST(int id)
         {
-            var category = await _context.Categories.FindAsync(id);
-            if(category == null)
-            {
-                return NotFound();
-            }
-
-            _context.Categories.Remove(category);
-            await _context.SaveChangesAsync();
+            await _categoryService.DeleteCategoryAsync(id);
             TempData["success"] = "Category has been deleted successfully";
             return RedirectToAction("Index");
         }
