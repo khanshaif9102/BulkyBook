@@ -15,12 +15,13 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Models\" />
+    <ProjectReference Include="..\BulkyBook.Buisness\BulkyBook.Buisness.csproj" />
+    <ProjectReference Include="..\BulkyBook.DataAcces\BulkyBook.DataAcces.csproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\BulkyBook.Buisness\BulkyBook.Buisness.csproj" />
-    <ProjectReference Include="..\BulkyBook.DataAcces\BulkyBook.DataAcces.csproj" />
+    <Folder Include="Areas\Admin\Controller\" />
+    <Folder Include="Controllers\" />
   </ItemGroup>
 
 </Project>
