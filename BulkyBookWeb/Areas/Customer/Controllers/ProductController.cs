@@ -2,6 +2,7 @@
 using BulkyBook.DataAccess.Data;
 using BulkyBook.Models;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 
 namespace BulkyBookWeb.Areas.Customer.Controllers
@@ -9,10 +10,12 @@ namespace BulkyBookWeb.Areas.Customer.Controllers
     [Area("Customer")]
     public class ProductController : Controller
     {
-        private readonly IProductService _ProductService;
-        public ProductController(IProductService ProductService)
+        private readonly IProductService _productService;
+        private readonly ICategoryService _categoryService;
+        public ProductController(IProductService ProductService, ICategoryService CategoryService)
         {
-            _ProductService = ProductService;
+            _productService = ProductService;
+            _categoryService = CategoryService;
         }
         public async Task<IActionResult> Index()
         {
@@ -20,20 +23,26 @@ namespace BulkyBookWeb.Areas.Customer.Controllers
         }
 
 
-        public IActionResult Create()
+        public async Task<IActionResult> Upsert()
         {
+            IEnumerable<SelectListItem> categoryList = (await _categoryService.GetAllCategoriesAsync()).Select(c => new SelectListItem
+            {
+                Text = c.Name,
+                Value = c.Id.ToString()
+            });
+
+            ViewData["categoryList"] = categoryList;
             return View();
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
         [ActionName("Create")]
-        public async Task<IActionResult> CreatePost(Product product)
+        public async Task<IActionResult> UpsertPost(Product product)
         {
-            
             if (ModelState.IsValid)
             {
-                await _ProductService.CreateProduct(product);
+                await _productService.CreateProduct(product);
                 TempData["success"] = "Product has been created successfully";
                 return RedirectToAction("Index");
             }
@@ -41,35 +50,6 @@ namespace BulkyBookWeb.Areas.Customer.Controllers
                 return View();
         }
 
-        public async Task<IActionResult> Update(int? id)
-        {
-            if(id == null || id == 0)
-            {
-                return NotFound();
-            }
-            var product = await _ProductService.GetProductByIdAsync(id.Value);
-            if (product==null)
-            {
-                return NotFound();
-            }
-            return View(product);
-            
-        }
-
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        [ActionName("Update")]
-        public async Task<IActionResult> UpdatePOST(Product product)
-        {
-            
-            if(ModelState.IsValid)
-            {
-                await _ProductService.UpdateProductAsync(product);
-                TempData["success"] = "Product has been updated successfully";
-                return RedirectToAction("Index");
-            }
-            return View();
-        }
 
         public async Task<IActionResult> Delete(int? id)
         {
@@ -77,7 +57,7 @@ namespace BulkyBookWeb.Areas.Customer.Controllers
             {
                 return NotFound();
             }
-            var product = await _ProductService.GetProductByIdAsync(id.Value);
+            var product = await _productService.GetProductByIdAsync(id.Value);
             if (product == null)
             {
                 return NotFound();
@@ -90,7 +70,7 @@ namespace BulkyBookWeb.Areas.Customer.Controllers
         [ActionName("Delete")]
         public async Task<IActionResult> DeletePOST(int id)
         {
-            await _ProductService.DeleteProductAsync(id);
+            await _productService.DeleteProductAsync(id);
             TempData["success"] = "Product has been deleted successfully";
             return RedirectToAction("Index");
         }
@@ -99,7 +79,7 @@ namespace BulkyBookWeb.Areas.Customer.Controllers
         #region API CALLS
         public async Task<IActionResult> GetAll()
         {
-            var products = await _ProductService.GetAllProductsAsync(true);
+            var products = await _productService.GetAllProductsAsync(true);
             return Json(new { data = products });
         }
 
