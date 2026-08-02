@@ -15,6 +15,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\BulkyBook.Buisness\BulkyBook.Buisness.csproj" />
     <ProjectReference Include="..\BulkyBook.DataAcces\BulkyBook.DataAcces.csproj" />
   </ItemGroup>
