@@ -11,10 +11,12 @@ namespace BulkyBookWeb.Areas.Customer.Controllers
     {
         private readonly IProductService _productService;
         private readonly ICategoryService _categoryService;
-        public ProductController(IProductService ProductService, ICategoryService CategoryService)
+        private readonly IWebHostEnvironment _webHostEnvironment;
+        public ProductController(IProductService ProductService, ICategoryService CategoryService, IWebHostEnvironment WebHostEnvironment)
         {
             _productService = ProductService;
             _categoryService = CategoryService;
+            _webHostEnvironment = WebHostEnvironment;
         }
         public async Task<IActionResult> Index()
         {
@@ -22,7 +24,7 @@ namespace BulkyBookWeb.Areas.Customer.Controllers
         }
 
 
-        public async Task<IActionResult> Upsert()
+        public async Task<IActionResult> Upsert(int? id)
         {
             var categories = await _categoryService.GetAllCategoriesAsync();
 
@@ -35,49 +37,79 @@ namespace BulkyBookWeb.Areas.Customer.Controllers
                 }),
                 Product = new Product()
             };
-
-            return View(productVM);
+            if(id == null || id == 0)
+            {
+                //Creating
+                return View(productVM);
+            }
+            else
+            {
+                productVM.Product = await _productService.GetProductByIdAsync(id.Value);
+                return View(productVM);
+            }
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
         [ActionName("Upsert")]
-        public async Task<IActionResult> UpsertPost(Product product,IFormFile? file)
+        public async Task<IActionResult> UpsertPost(ProductVM productVM,IFormFile? file)
         {
             if (ModelState.IsValid)
             {
-                await _productService.CreateProduct(product);
-                TempData["success"] = "Product has been created successfully";
+                string wwwRootPath = _webHostEnvironment.WebRootPath;
+                if(file!=null)
+                {
+                    string fileName = Guid.NewGuid().ToString()+Path.GetExtension(file.FileName);
+                    string productPath = Path.Combine("images","products");
+                    string finalPath = Path.Combine(wwwRootPath, productPath);
+
+                    if (!Directory.Exists(finalPath))
+                    {
+                        Directory.CreateDirectory(finalPath);
+                    }
+                    
+                    using (var fileStream = new FileStream(Path.Combine(finalPath,fileName),FileMode.Create))
+                    {
+                        await file.CopyToAsync(fileStream);
+                    }
+
+                    productVM.Product.ImageUrl = Path.Combine(@"\", productPath, fileName).Replace("\\", "/");
+                }
+
+                if (productVM.Product.Id == 0)
+                {
+                    //Creating
+                    await _productService.CreateProduct(productVM.Product);
+                    TempData["success"] = "Product has been created successfully";
+                }
+                else
+                {
+                    await _productService.UpdateProductAsync(productVM.Product);
+                    TempData["success"] = "Product has been updated successfully";
+                }
+                
+                
                 return RedirectToAction("Index");
             }
             else
-                return View();
-        }
-
-
-        public async Task<IActionResult> Delete(int? id)
-        {
-            if (id == null || id == 0)
             {
-                return NotFound();
-            }
-            var product = await _productService.GetProductByIdAsync(id.Value);
-            if (product == null)
-            {
-                return NotFound();
-            }
-            return View(product);
-        }
+                var categories = await _categoryService.GetAllCategoriesAsync();
 
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        [ActionName("Delete")]
-        public async Task<IActionResult> DeletePOST(int id)
-        {
-            await _productService.DeleteProductAsync(id);
-            TempData["success"] = "Product has been deleted successfully";
-            return RedirectToAction("Index");
+                productVM = new()
+                {
+                    CategoryList = categories.Select(c => new SelectListItem
+                    {
+                        Text = c.Name,
+                        Value = c.Id.ToString()
+                    }),
+                    Product = new Product()
+                };
+                return View(productVM);
+            }
         }
+        
+
+        
 
 
         #region API CALLS
@@ -85,6 +117,35 @@ namespace BulkyBookWeb.Areas.Customer.Controllers
         {
             var products = await _productService.GetAllProductsAsync(true);
             return Json(new { data = products });
+        }
+
+        [HttpDelete]
+        public async Task<IActionResult> Delete(int? id)
+        {
+            if (id == null || id == 0)
+            {
+                return Json(new { success = false, message = "Invalid ID" });
+            }
+
+            var productToBeDeleted = await _productService.GetProductByIdAsync(id.Value);
+            if (productToBeDeleted == null)
+            {
+                return Json(new { success = false, message = "Error while deleting" });
+            }
+
+            //delete product image if that exist
+            if (!string.IsNullOrEmpty(productToBeDeleted.ImageUrl))
+            {
+                var imagePath = Path.Combine(_webHostEnvironment.WebRootPath, productToBeDeleted.ImageUrl.TrimStart('\\','/'));
+                if (System.IO.File.Exists(imagePath))
+                {
+                    System.IO.File.Delete(imagePath);
+                }
+            }
+
+            await _productService.DeleteProductAsync(id.Value);
+
+            return Json(new {success = true, message = "Product has been deleted successfully" });
         }
 
         #endregion
