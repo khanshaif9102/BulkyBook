@@ -7,7 +7,7 @@ namespace BulkyBook.Buisness.Services.IServices
 {
     public interface IProductService
     {
-        Task<Product?> GetProductByIdAsync(int id);
+        Task<Product?> GetProductByIdAsync(int id, bool includeCategory = false);
         Task<IEnumerable<Product>> GetAllProductsAsync(bool includeCategory=false);
         Task<Product> CreateProduct(Product product);
         Task UpdateProductAsync(Product product);
