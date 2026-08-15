@@ -1,6 +1,7 @@
 using BulkyBook.Buisness.Services;
 using BulkyBook.Buisness.Services.IServices;
 using BulkyBook.DataAccess.Data;
+using BulkyBook.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
@@ -13,6 +14,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(option =>
 {
     option.UseSqlServer(builder.Configuration.GetConnectionString("SQLConnection"));
 });
+
 
 builder.Services.AddIdentity<IdentityUser, IdentityRole>().AddEntityFrameworkStores<ApplicationDbContext>();
 
