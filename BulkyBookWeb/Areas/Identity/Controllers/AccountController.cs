@@ -1,7 +1,9 @@
 ﻿using BulkyBook.Models;
 using BulkyBook.Models.ViewModels;
+using BulkyBook.Utility;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace BulkyBookWeb.Areas.Identity.Controllers
 {
@@ -10,10 +12,12 @@ namespace BulkyBookWeb.Areas.Identity.Controllers
     {
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
-        public AccountController(UserManager<ApplicationUser> userManager,SignInManager<ApplicationUser> signInManager)
+        private readonly RoleManager<IdentityRole> _roleManager;
+        public AccountController(UserManager<ApplicationUser> userManager,SignInManager<ApplicationUser> signInManager,RoleManager<IdentityRole> roleManager)
         {
             _userManager = userManager;
             _signInManager = signInManager;
+            _roleManager = roleManager;
         }
 
         public IActionResult Login()
@@ -40,13 +44,30 @@ namespace BulkyBookWeb.Areas.Identity.Controllers
 
         public IActionResult Register()
         {
-            return View();
+            var model = new RegisterVM()
+            {
+                RoleList =
+                [
+                    new SelectListItem{ Text= SD.RoleCustomer, Value= SD.RoleCustomer },
+                    new SelectListItem{ Text= SD.RoleAdmin, Value= SD.RoleAdmin },
+                    new SelectListItem{ Text= SD.RoleEmployee, Value= SD.RoleEmployee }
+                ]
+            };
+            return View(model);
         }
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Register(RegisterVM registerVM)
         {
-            if(ModelState.IsValid)
+
+            if(!await _roleManager.RoleExistsAsync(SD.RoleCustomer))
+            {
+                await _roleManager.CreateAsync(new IdentityRole(SD.RoleCustomer));
+                await _roleManager.CreateAsync(new IdentityRole(SD.RoleAdmin));
+                await _roleManager.CreateAsync(new IdentityRole(SD.RoleEmployee));
+            }
+
+            if (ModelState.IsValid)
             {
                 var user = new ApplicationUser
                 {
@@ -63,6 +84,16 @@ namespace BulkyBookWeb.Areas.Identity.Controllers
                 var result = await _userManager.CreateAsync(user,registerVM.Password);
                 if(result.Succeeded)
                 {
+
+                    if(!string.IsNullOrEmpty(registerVM.Role))
+                    {
+                        await _userManager.AddToRoleAsync(user, registerVM.Role);
+                    }
+                    else
+                    {
+                        await _userManager.AddToRoleAsync(user,SD.RoleCustomer);
+                    }
+
                     await _signInManager.SignInAsync(user, isPersistent: false);
                     return RedirectToAction("Index", "Home", new {area="Customer"});
                 }
@@ -71,6 +102,14 @@ namespace BulkyBookWeb.Areas.Identity.Controllers
                     ModelState.AddModelError("", error.Description);
                 }
             }
+
+
+            registerVM.RoleList =
+                [
+                    new SelectListItem{ Text= SD.RoleCustomer, Value= SD.RoleCustomer },
+                    new SelectListItem{ Text= SD.RoleAdmin, Value= SD.RoleAdmin },
+                    new SelectListItem{ Text= SD.RoleEmployee, Value= SD.RoleEmployee }
+                ];
             return View(registerVM);
         }
 
