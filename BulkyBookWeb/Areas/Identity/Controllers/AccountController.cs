@@ -20,19 +20,25 @@ namespace BulkyBookWeb.Areas.Identity.Controllers
             _roleManager = roleManager;
         }
 
-        public IActionResult Login()
+        public IActionResult Login(string? returnUrl = null)
         {
+            ViewData["ReturnUrl"] = returnUrl;
             return View();
         }
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Login(LoginVM loginVM)
+        public async Task<IActionResult> Login(LoginVM loginVM, string? returnUrl = null)
         {
             if(ModelState.IsValid)
             {
                 var result = await _signInManager.PasswordSignInAsync(loginVM.Email, loginVM.Password, loginVM.RememberMe, lockoutOnFailure: false);
                 if (result.Succeeded)
                 {
+                    if(!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
+                    {
+                        return Redirect(returnUrl);
+                    }
+
                     return RedirectToAction("Index", "Home", new { area = "Customer" });
                 }
                 ModelState.AddModelError(string.Empty, "Invalid Login Attempt");
@@ -42,7 +48,7 @@ namespace BulkyBookWeb.Areas.Identity.Controllers
         }
 
 
-        public IActionResult Register()
+        public IActionResult Register(string? returnUrl = null)
         {
             var model = new RegisterVM()
             {
@@ -53,11 +59,12 @@ namespace BulkyBookWeb.Areas.Identity.Controllers
                     new SelectListItem{ Text= SD.RoleEmployee, Value= SD.RoleEmployee }
                 ]
             };
+            ViewData["ReturnUrl"] = returnUrl;
             return View(model);
         }
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Register(RegisterVM registerVM)
+        public async Task<IActionResult> Register(RegisterVM registerVM, string? returnUrl = null)
         {
 
             if(!await _roleManager.RoleExistsAsync(SD.RoleCustomer))
@@ -95,6 +102,12 @@ namespace BulkyBookWeb.Areas.Identity.Controllers
                     }
 
                     await _signInManager.SignInAsync(user, isPersistent: false);
+
+                    if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
+                    {
+                        return Redirect(returnUrl);
+                    }
+
                     return RedirectToAction("Index", "Home", new {area="Customer"});
                 }
                 foreach(var error in result.Errors)

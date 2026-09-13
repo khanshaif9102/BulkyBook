@@ -1,12 +1,15 @@
 ﻿using BulkyBook.Buisness.Services.IServices;
 using BulkyBook.Models;
 using BulkyBook.Models.ViewModels;
+using BulkyBook.Utility;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace BulkyBookWeb.Areas.Admin.Controllers
 {
     [Area("Admin")]
+    [Authorize(Roles = SD.RoleAdmin)]
     public class ProductController : Controller
     {
         private readonly IProductService _productService;
@@ -18,12 +21,14 @@ namespace BulkyBookWeb.Areas.Admin.Controllers
             _categoryService = CategoryService;
             _webHostEnvironment = WebHostEnvironment;
         }
+
+        [AllowAnonymous]
         public async Task<IActionResult> Index()
         {
             return View();
         }
 
-
+        
         public async Task<IActionResult> Upsert(int? id)
         {
             var categories = await _categoryService.GetAllCategoriesAsync();
@@ -48,7 +53,7 @@ namespace BulkyBookWeb.Areas.Admin.Controllers
                 return View(productVM);
             }
         }
-
+        
         [HttpPost]
         [ValidateAntiForgeryToken]
         [ActionName("Upsert")]
@@ -113,6 +118,8 @@ namespace BulkyBookWeb.Areas.Admin.Controllers
 
 
         #region API CALLS
+        [HttpGet]
+        [AllowAnonymous]
         public async Task<IActionResult> GetAll()
         {
             var products = await _productService.GetAllProductsAsync(true);

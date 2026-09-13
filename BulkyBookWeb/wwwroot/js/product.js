@@ -19,7 +19,7 @@ productDataTable = $('#tblData').DataTable({
 
         {
             data: 'id', width: "25%", render: function (data) {
-                return `<div class="d-flex gap-2 justify-content-end">\
+                return `<div class="d-flex gap-2 justify-content-end">
 
                 <a href="/admin/product/upsert?id=${data}" class="btn btn-outline-success">
                    <i class="bi bi-pencil-square"></i>Edit
