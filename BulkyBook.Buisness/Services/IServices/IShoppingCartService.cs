@@ -12,5 +12,6 @@ namespace BulkyBook.Buisness.Services.IServices
         Task<int> GetCartCountAsync(string userId);
         Task UpdateCartAsync(ShoppingCart cart);
         Task ClearCartAsync(string userId);
+        Task<ShoppingCart> AddToCartAsync(ShoppingCart cart);
     }
 }
