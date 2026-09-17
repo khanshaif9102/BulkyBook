@@ -38,6 +38,9 @@ namespace BulkyBook.Models
         [Required]
         public string Name { get; set; }
 
-
-    }
+        [ValidateNever]
+        public IEnumerable<OrderDetails> OrderDetails
+        {
+            get; set;
+        }
 }
